@@ -26,10 +26,6 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 From now on we assume these files to be downloaded to the working directory.
 
 
-```{r echo = FALSE}
-setwd("C://coursera//PML")
-```
-
 ```{r}
 training <- read.csv("pml-training.csv")
 testing  <- read.csv("pml-testing.csv")
@@ -47,5 +43,36 @@ library(rpart.plot)
 library(rattle)
 library(randomForest)
 library(corrplot)
+```
+
+An inspection of the classes in the training set tells us that there are five levels to predict:
+
+```{r}
+unique(training$classe)
+```
+
+The first four columns of the training set can be omitted as they are only meant for identifcation (of the users) but not for any classification purposes. In the same steo we can partition the training set into a smaller training set and a testing set:
+
+
+```{r}
+
+train_index<-createDataPartition(training$classe, p=.75, list = FALSE)
+
+train_small<-training[train_index,-(1:4)]
+test_small<-training[-train_index,-(1:4)]
+```
+
+In order to get a training set to build reliable predictions on the training set we should  remove those predictors (columns) that have a very low variance or a lot of values which are (almost) zero:
+
+```{r}
+nearzv<-nearZeroVar(train_small)
+
+train_small<-train_small[,-nearzv]
+test_small<-test_small[,-nearzv]
+
+
+almostna    <- sapply(train_small, function(x) mean(is.na(x))) > 0.95
+train_small <- train_small[, almostna==FALSE]
+test_small  <- test_small[, almostna==FALSE]
 ```
 
