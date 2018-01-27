@@ -139,28 +139,12 @@ testing  &lt;- read.csv(&quot;pml-testing.csv&quot;)</code></pre>
 <h1>General Preparation</h1>
 <p>In order to work with the data efficiently we ne to load some packages which we assume to be installed:</p>
 <pre class="r"><code>library(knitr)
-library(caret)</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(rpart)
+library(caret)
+library(rpart)
 library(rpart.plot)
-library(rattle)</code></pre>
-<pre><code>## Rattle: A free graphical interface for data science with R.
-## Version 5.1.0 Copyright (c) 2006-2017 Togaware Pty Ltd.
-## Geben Sie 'rattle()' ein, um Ihre Daten mischen.</code></pre>
-<pre class="r"><code>library(randomForest)</code></pre>
-<pre><code>## randomForest 4.6-12</code></pre>
-<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre><code>## 
-## Attaching package: 'randomForest'</code></pre>
-<pre><code>## The following object is masked from 'package:rattle':
-## 
-##     importance</code></pre>
-<pre><code>## The following object is masked from 'package:ggplot2':
-## 
-##     margin</code></pre>
-<pre class="r"><code>library(corrplot)</code></pre>
-<pre><code>## corrplot 0.84 loaded</code></pre>
+library(rattle)
+library(randomForest)
+library(corrplot)</code></pre>
 <p>An inspection of the classes in the training set tells us that there are five levels to predict:</p>
 <pre class="r"><code>unique(training$classe)</code></pre>
 <pre><code>## [1] A B C D E
@@ -180,6 +164,7 @@ test_small&lt;-test_small[,-nearzv]
 almostna    &lt;- sapply(train_small, function(x) mean(is.na(x))) &gt; 0.95
 train_small &lt;- train_small[, almostna==FALSE]
 test_small  &lt;- test_small[, almostna==FALSE]</code></pre>
+<p>So now the</p>
 </div>
 
 

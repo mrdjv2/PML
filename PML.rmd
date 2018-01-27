@@ -35,7 +35,7 @@ testing  <- read.csv("pml-testing.csv")
 
 In order to work with the data efficiently we ne to load some packages which we assume to be installed:
 
-```{r}
+```{r message = FALSE}
 library(knitr)
 library(caret)
 library(rpart)
@@ -76,3 +76,4 @@ train_small <- train_small[, almostna==FALSE]
 test_small  <- test_small[, almostna==FALSE]
 ```
 
+So now the 
