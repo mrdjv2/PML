@@ -6,6 +6,7 @@ library(rattle)
 library(randomForest)
 library(corrplot)
 
+#From Local
 
 # Getting the data
 
