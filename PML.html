@@ -144,7 +144,8 @@ library(rpart)
 library(rpart.plot)
 library(rattle)
 library(randomForest)
-library(corrplot)</code></pre>
+library(corrplot)
+library(reshape2)</code></pre>
 <p>An inspection of the classes in the training set tells us that there are five levels to predict:</p>
 <pre class="r"><code>unique(training$classe)</code></pre>
 <pre><code>## [1] A B C D E
@@ -152,8 +153,8 @@ library(corrplot)</code></pre>
 <p>The first four columns of the training set can be omitted as they are only meant for identifcation (of the users) but not for any classification purposes. In the same steo we can partition the training set into a smaller training set and a testing set:</p>
 <pre class="r"><code>train_index&lt;-createDataPartition(training$classe, p=.75, list = FALSE)
 
-train_small&lt;-training[train_index,-(1:4)]
-test_small&lt;-training[-train_index,-(1:4)]</code></pre>
+train_small&lt;-training[train_index,-(1:5)]
+test_small&lt;-training[-train_index,-(1:5)]</code></pre>
 <p>In order to get a training set to build reliable predictions on the training set we should remove those predictors (columns) that have a very low variance or a lot of values which are (almost) zero:</p>
 <pre class="r"><code>nearzv&lt;-nearZeroVar(train_small)
 
@@ -164,7 +165,50 @@ test_small&lt;-test_small[,-nearzv]
 almostna    &lt;- sapply(train_small, function(x) mean(is.na(x))) &gt; 0.95
 train_small &lt;- train_small[, almostna==FALSE]
 test_small  &lt;- test_small[, almostna==FALSE]</code></pre>
-<p>So now the</p>
+</div>
+<div id="correlations" class="section level1">
+<h1>Correlations</h1>
+<p>So now the training set is sufficiently clean to start looking for correlations in order to remove redundancies. A good tool for that is the correlation matrix:</p>
+<pre class="r"><code>correlation&lt;-cor(train_small[,-54])
+subset(melt(correlation), abs(value) &gt;0.95 &amp; Var1 != Var2 )</code></pre>
+<pre><code>##                  Var1             Var2      value
+## 58   total_accel_belt        roll_belt  0.9812922
+## 64       accel_belt_z        roll_belt -0.9919712
+## 115      accel_belt_x       pitch_belt -0.9666118
+## 214         roll_belt total_accel_belt  0.9812922
+## 223      accel_belt_z total_accel_belt -0.9754026
+## 427        pitch_belt     accel_belt_x -0.9666118
+## 532         roll_belt     accel_belt_z -0.9919712
+## 535  total_accel_belt     accel_belt_z -0.9754026
+## 1677 gyros_dumbbell_z gyros_dumbbell_x -0.9841741
+## 1781 gyros_dumbbell_x gyros_dumbbell_z -0.9841741</code></pre>
+<p>We can see here that “roll_belt” is highly correlated to “total_accel_belt” and “accel_belt_z”, also “gyros_dumbbell_z” and “gyros_dumbbell_x” are highly correlated and also “pitch_belt” and “accel_belt_x”. So consequently we remove “total_accel_belt”, “accel_belt_z”, “gyros_dumbbell_z” and “accel_belt_x” from our training set:</p>
+<pre class="r"><code>train_small&lt;-subset(train_small, select=-c(total_accel_belt, accel_belt_z, gyros_dumbbell_z, accel_belt_x))</code></pre>
+</div>
+<div id="building-prectiction-models" class="section level1">
+<h1>Building prectiction models</h1>
+<p>Now we have a training set which is clean and without redundancies and we can start with some prediction models.</p>
+<div id="random-forest" class="section level2">
+<h2>Random forest</h2>
+<pre class="r"><code>controlRF &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=FALSE)
+modFitRandForest &lt;- train(classe ~ ., data=train_small, method=&quot;rf&quot;, trControl=controlRF)
+modFitRandForest$finalModel</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 25
+## 
+##         OOB estimate of  error rate: 0.22%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 4183    1    0    0    1 0.0004778973
+## B    7 2838    2    1    0 0.0035112360
+## C    0    5 2561    1    0 0.0023373588
+## D    0    0   10 2401    1 0.0045605307
+## E    0    0    0    4 2702 0.0014781966</code></pre>
+</div>
 </div>
 
 
