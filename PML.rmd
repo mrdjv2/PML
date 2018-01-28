@@ -43,6 +43,7 @@ library(rpart.plot)
 library(rattle)
 library(randomForest)
 library(corrplot)
+library(reshape2)
 ```
 
 An inspection of the classes in the training set tells us that there are five levels to predict:
@@ -58,8 +59,8 @@ The first four columns of the training set can be omitted as they are only meant
 
 train_index<-createDataPartition(training$classe, p=.75, list = FALSE)
 
-train_small<-training[train_index,-(1:4)]
-test_small<-training[-train_index,-(1:4)]
+train_small<-training[train_index,-(1:5)]
+test_small<-training[-train_index,-(1:5)]
 ```
 
 In order to get a training set to build reliable predictions on the training set we should  remove those predictors (columns) that have a very low variance or a lot of values which are (almost) zero:
@@ -76,4 +77,67 @@ train_small <- train_small[, almostna==FALSE]
 test_small  <- test_small[, almostna==FALSE]
 ```
 
-So now the 
+#Correlations
+
+So now the training set is sufficiently clean to start looking for correlations in order to remove redundancies. A good tool for that is the correlation matrix:
+
+```{r}
+correlation<-cor(train_small[,-54])
+subset(melt(correlation), abs(value) >0.95 & Var1 != Var2 )
+```
+
+We can see here that "roll_belt" is highly correlated to "total_accel_belt" and "accel_belt_z", also "gyros_dumbbell_z" and "gyros_dumbbell_x" are highly correlated and also "pitch_belt" and "accel_belt_x". So consequently we remove "total_accel_belt", "accel_belt_z", "gyros_dumbbell_z" and "accel_belt_x" from our training set:
+
+```{r}
+train_small<-subset(train_small, select=-c(total_accel_belt, accel_belt_z, gyros_dumbbell_z, accel_belt_x))
+```
+
+#Building prectiction models
+
+Now we have a training set which is clean and without redundancies and we can start with some prediction models.
+
+##Random forest
+
+```{r}
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitRF <- train(classe ~ ., data=train_small, method="rf", trControl=controlRF)
+modFitRF$finalModel
+```
+
+```{r}
+predictRF <- predict(modFitRF, newdata=test_small)
+confMatRandForest <- confusionMatrix(predictRF, test_small$classe)
+confMatRandForest
+```
+
+##Decision tree
+
+```{r}
+modFitDT <- rpart(classe ~ ., data=train_small, method="class")
+
+```
+
+```{r}
+predictDT <- predict(modFitDT, newdata=test_small, type = "class")
+confMatDT <- confusionMatrix(predictDT, test_small$classe)
+confMatDT
+```
+
+##Generalized boosted model
+
+```{r}
+controlGBM <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitGBM <- train(classe ~ ., data=train_small, method="gbm", trControl=controlRF, verbose = FALSE)
+modFitGBM$finalModel
+```
+
+```{r}
+predictGBM <- predict(modFitGBM, newdata=test_small)
+confMatGBM <- confusionMatrix(predictGBM, testing$classe)
+confMatGBM
+```
+
+#Summary
+
+After comparing these three prediction models we see that GBM and random forest turn out to be the ones with the highest accuracy (~99%). 
+The accuracy of the decision tree is rather poor (~83%) but is by far the fastest algorithm.

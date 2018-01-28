@@ -5,6 +5,7 @@ library(rpart.plot)
 library(rattle)
 library(randomForest)
 library(corrplot)
+library(reshape2)
 
 #From Local
 
@@ -40,4 +41,24 @@ test_small<-test_small[,-nearzv]
 almostna    <- sapply(train_small, function(x) mean(is.na(x))) > 0.95
 train_small <- train_small[, almostna==FALSE]
 test_small  <- test_small[, almostna==FALSE]
+
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitRF <- train(classe ~ ., data=train_small, method="rf", trControl=controlRF)
+modFitRF$finalModel
+
+
+predictRF <- predict(modFitRF, newdata=test_small)
+confMatRandForest <- confusionMatrix(predictRF, test_small$classe)
+confMatRandForest
+
+predict_test<-predict(modFitRF, newdata=testing)
+
+
+controlGBM <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitGBM <- train(classe ~ ., data=train_small, method="gbm", trControl=controlRF, verbose=FALSE)
+modFitGBM$finalModel
+
+predictGBM <- predict(modFitGBM, newdata=test_small)
+confMatGBM <- confusionMatrix(predictGBM, test_small$classe)
+confMatGBM
 
