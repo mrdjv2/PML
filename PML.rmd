@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 ```
 
 ## Introduction
@@ -56,6 +56,8 @@ The first four columns of the training set can be omitted as they are only meant
 
 
 ```{r}
+
+set.seed(4711)
 
 train_index<-createDataPartition(training$classe, p=.75, list = FALSE)
 
@@ -125,7 +127,7 @@ confMatDT
 
 ##Generalized boosted model
 
-```{r}
+```{r message = FALSE}
 controlGBM <- trainControl(method="cv", number=3, verboseIter=FALSE)
 modFitGBM <- train(classe ~ ., data=train_small, method="gbm", trControl=controlRF, verbose = FALSE)
 modFitGBM$finalModel
@@ -133,11 +135,11 @@ modFitGBM$finalModel
 
 ```{r}
 predictGBM <- predict(modFitGBM, newdata=test_small)
-confMatGBM <- confusionMatrix(predictGBM, testing$classe)
+confMatGBM <- confusionMatrix(predictGBM, test_small$classe)
 confMatGBM
 ```
 
 #Summary
 
 After comparing these three prediction models we see that GBM and random forest turn out to be the ones with the highest accuracy (~99%). 
-The accuracy of the decision tree is rather poor (~83%) but is by far the fastest algorithm.
+The accuracy of the decision tree is rather poor (~74%) but is by far the fastest algorithm.

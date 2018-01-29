@@ -151,7 +151,9 @@ library(reshape2)</code></pre>
 <pre><code>## [1] A B C D E
 ## Levels: A B C D E</code></pre>
 <p>The first four columns of the training set can be omitted as they are only meant for identifcation (of the users) but not for any classification purposes. In the same steo we can partition the training set into a smaller training set and a testing set:</p>
-<pre class="r"><code>train_index&lt;-createDataPartition(training$classe, p=.75, list = FALSE)
+<pre class="r"><code>set.seed(4711)
+
+train_index&lt;-createDataPartition(training$classe, p=.75, list = FALSE)
 
 train_small&lt;-training[train_index,-(1:5)]
 test_small&lt;-training[-train_index,-(1:5)]</code></pre>
@@ -171,17 +173,15 @@ test_small  &lt;- test_small[, almostna==FALSE]</code></pre>
 <p>So now the training set is sufficiently clean to start looking for correlations in order to remove redundancies. A good tool for that is the correlation matrix:</p>
 <pre class="r"><code>correlation&lt;-cor(train_small[,-54])
 subset(melt(correlation), abs(value) &gt;0.95 &amp; Var1 != Var2 )</code></pre>
-<pre><code>##                  Var1             Var2      value
-## 58   total_accel_belt        roll_belt  0.9812922
-## 64       accel_belt_z        roll_belt -0.9919712
-## 115      accel_belt_x       pitch_belt -0.9666118
-## 214         roll_belt total_accel_belt  0.9812922
-## 223      accel_belt_z total_accel_belt -0.9754026
-## 427        pitch_belt     accel_belt_x -0.9666118
-## 532         roll_belt     accel_belt_z -0.9919712
-## 535  total_accel_belt     accel_belt_z -0.9754026
-## 1677 gyros_dumbbell_z gyros_dumbbell_x -0.9841741
-## 1781 gyros_dumbbell_x gyros_dumbbell_z -0.9841741</code></pre>
+<pre><code>##                 Var1             Var2      value
+## 58  total_accel_belt        roll_belt  0.9808514
+## 64      accel_belt_z        roll_belt -0.9920099
+## 115     accel_belt_x       pitch_belt -0.9657739
+## 214        roll_belt total_accel_belt  0.9808514
+## 223     accel_belt_z total_accel_belt -0.9748419
+## 427       pitch_belt     accel_belt_x -0.9657739
+## 532        roll_belt     accel_belt_z -0.9920099
+## 535 total_accel_belt     accel_belt_z -0.9748419</code></pre>
 <p>We can see here that “roll_belt” is highly correlated to “total_accel_belt” and “accel_belt_z”, also “gyros_dumbbell_z” and “gyros_dumbbell_x” are highly correlated and also “pitch_belt” and “accel_belt_x”. So consequently we remove “total_accel_belt”, “accel_belt_z”, “gyros_dumbbell_z” and “accel_belt_x” from our training set:</p>
 <pre class="r"><code>train_small&lt;-subset(train_small, select=-c(total_accel_belt, accel_belt_z, gyros_dumbbell_z, accel_belt_x))</code></pre>
 </div>
@@ -191,8 +191,8 @@ subset(melt(correlation), abs(value) &gt;0.95 &amp; Var1 != Var2 )</code></pre>
 <div id="random-forest" class="section level2">
 <h2>Random forest</h2>
 <pre class="r"><code>controlRF &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=FALSE)
-modFitRandForest &lt;- train(classe ~ ., data=train_small, method=&quot;rf&quot;, trControl=controlRF)
-modFitRandForest$finalModel</code></pre>
+modFitRF &lt;- train(classe ~ ., data=train_small, method=&quot;rf&quot;, trControl=controlRF)
+modFitRF$finalModel</code></pre>
 <pre><code>## 
 ## Call:
 ##  randomForest(x = x, y = y, mtry = param$mtry) 
@@ -200,15 +200,134 @@ modFitRandForest$finalModel</code></pre>
 ##                      Number of trees: 500
 ## No. of variables tried at each split: 25
 ## 
-##         OOB estimate of  error rate: 0.22%
+##         OOB estimate of  error rate: 0.18%
 ## Confusion matrix:
-##      A    B    C    D    E  class.error
-## A 4183    1    0    0    1 0.0004778973
-## B    7 2838    2    1    0 0.0035112360
-## C    0    5 2561    1    0 0.0023373588
-## D    0    0   10 2401    1 0.0045605307
-## E    0    0    0    4 2702 0.0014781966</code></pre>
+##      A    B    C    D    E class.error
+## A 4185    0    0    0    0 0.000000000
+## B    7 2838    3    0    0 0.003511236
+## C    0    5 2561    1    0 0.002337359
+## D    0    0    7 2405    0 0.002902156
+## E    0    0    0    4 2702 0.001478197</code></pre>
+<pre class="r"><code>predictRF &lt;- predict(modFitRF, newdata=test_small)
+confMatRandForest &lt;- confusionMatrix(predictRF, test_small$classe)
+confMatRandForest</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1393    1    0    0    0
+##          B    1  946    2    0    0
+##          C    0    1  853    6    0
+##          D    0    1    0  798    2
+##          E    1    0    0    0  899
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9969         
+##                  95% CI : (0.995, 0.9983)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9961         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9986   0.9968   0.9977   0.9925   0.9978
+## Specificity            0.9997   0.9992   0.9983   0.9993   0.9998
+## Pos Pred Value         0.9993   0.9968   0.9919   0.9963   0.9989
+## Neg Pred Value         0.9994   0.9992   0.9995   0.9985   0.9995
+## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+## Detection Rate         0.2841   0.1929   0.1739   0.1627   0.1833
+## Detection Prevalence   0.2843   0.1935   0.1754   0.1633   0.1835
+## Balanced Accuracy      0.9991   0.9980   0.9980   0.9959   0.9988</code></pre>
 </div>
+<div id="decision-tree" class="section level2">
+<h2>Decision tree</h2>
+<pre class="r"><code>modFitDT &lt;- rpart(classe ~ ., data=train_small, method=&quot;class&quot;)</code></pre>
+<pre class="r"><code>predictDT &lt;- predict(modFitDT, newdata=test_small, type = &quot;class&quot;)
+confMatDT &lt;- confusionMatrix(predictDT, test_small$classe)
+confMatDT</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1246  169   26   58   51
+##          B   45  568   62   67  105
+##          C   13   52  701  115   66
+##          D   74  132   50  535  109
+##          E   17   28   16   29  570
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.7382          
+##                  95% CI : (0.7256, 0.7504)
+##     No Information Rate : 0.2845          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.6678          
+##  Mcnemar's Test P-Value : &lt; 2.2e-16       
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.8932   0.5985   0.8199   0.6654   0.6326
+## Specificity            0.9134   0.9295   0.9392   0.9110   0.9775
+## Pos Pred Value         0.8039   0.6706   0.7402   0.5944   0.8636
+## Neg Pred Value         0.9556   0.9061   0.9611   0.9328   0.9220
+## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+## Detection Rate         0.2541   0.1158   0.1429   0.1091   0.1162
+## Detection Prevalence   0.3161   0.1727   0.1931   0.1835   0.1346
+## Balanced Accuracy      0.9033   0.7640   0.8796   0.7882   0.8051</code></pre>
+</div>
+<div id="generalized-boosted-model" class="section level2">
+<h2>Generalized boosted model</h2>
+<pre class="r"><code>controlGBM &lt;- trainControl(method=&quot;cv&quot;, number=3, verboseIter=FALSE)
+modFitGBM &lt;- train(classe ~ ., data=train_small, method=&quot;gbm&quot;, trControl=controlRF, verbose = FALSE)
+modFitGBM$finalModel</code></pre>
+<pre><code>## A gradient boosted model with multinomial loss function.
+## 150 iterations were performed.
+## There were 49 predictors of which 41 had non-zero influence.</code></pre>
+<pre class="r"><code>predictGBM &lt;- predict(modFitGBM, newdata=test_small)
+confMatGBM &lt;- confusionMatrix(predictGBM, test_small$classe)
+confMatGBM</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1389    7    0    0    0
+##          B    6  932    7    9    3
+##          C    0    8  841   10    1
+##          D    0    2    6  783    8
+##          E    0    0    1    2  889
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9857         
+##                  95% CI : (0.982, 0.9889)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9819         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9957   0.9821   0.9836   0.9739   0.9867
+## Specificity            0.9980   0.9937   0.9953   0.9961   0.9993
+## Pos Pred Value         0.9950   0.9739   0.9779   0.9800   0.9966
+## Neg Pred Value         0.9983   0.9957   0.9965   0.9949   0.9970
+## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+## Detection Rate         0.2832   0.1900   0.1715   0.1597   0.1813
+## Detection Prevalence   0.2847   0.1951   0.1754   0.1629   0.1819
+## Balanced Accuracy      0.9969   0.9879   0.9895   0.9850   0.9930</code></pre>
+</div>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>After comparing these three prediction models we see that GBM and random forest turn out to be the ones with the highest accuracy (~99%). The accuracy of the decision tree is rather poor (~74%) but is by far the fastest algorithm.</p>
 </div>
 
 
